@@ -17,9 +17,13 @@
 ### Dashboard
 
 - KPI cards for health/documents/open tasks
+- Upload control for document ingestion
+- Document selector for analysis scope
+- Analysis action trigger
 - Recent document list
 - Action queue list
 - API connection visibility for debugging/demo
+- Report content panel for immediate review
 
 ## 3. Visual Direction
 
@@ -42,3 +46,4 @@ These keep styling consistent and simplify future expansion.
 - `fetchJson()` utility reads from backend base URL.
 - Dashboard loads health, documents, and tasks in parallel.
 - API errors surface in an inline warning block.
+- Analysis flow calls upload and analysis APIs, then hydrates findings/tasks/report sections.

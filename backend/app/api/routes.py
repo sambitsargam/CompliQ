@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import PlainTextResponse
 from sqlmodel import Session, select
 
 from app.core.config import get_settings
@@ -137,3 +140,16 @@ def get_report(analysis_id: int, session: Session = Depends(get_session)):
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
+
+
+@router.get("/reports/{analysis_id}/content", response_class=PlainTextResponse)
+def get_report_content(analysis_id: int, session: Session = Depends(get_session)):
+    report = session.exec(select(Report).where(Report.analysis_id == analysis_id)).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    report_path = Path(report.report_path)
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Report file missing")
+
+    return report_path.read_text(encoding="utf-8")

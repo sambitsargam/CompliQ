@@ -1,53 +1,53 @@
 # CompliQ Frontend
 
-## Purpose
+The frontend includes a landing page and an interactive dashboard for running end-to-end compliance analysis.
 
-The frontend provides:
+## 1. Views
 
-1. A polished landing page with value proposition and feature overview.
-2. A dashboard that reads backend APIs for health, documents, and tasks.
+### Landing (`/`)
 
-## Stack
+- Hero section with value proposition
+- Product output snapshot
+- Feature highlights
+- CTA to dashboard
 
-- Next.js (App Router)
+### Dashboard (`/dashboard`)
+
+- Backend health indicator
+- Document upload widget
+- Document multi-select list
+- Analysis trigger button
+- Findings and tasks view
+- Report content viewer
+
+## 2. Stack
+
+- Next.js App Router
 - TypeScript
 - Tailwind CSS
 
-## Run
+## 3. Local Run
 
 ```bash
+cd frontend
 npm install
 npm run dev
 ```
 
 Open `http://localhost:3000`.
 
-## Views
+## 4. API Integration
 
-### Landing (`/`)
-
-- Brand intro and tagline
-- CTA to open dashboard
-- Feature cards
-- Snapshot panel
-
-### Dashboard (`/dashboard`)
-
-- Service health card
-- Documents count card
-- Open tasks card
-- API base reference
-- Recent documents panel
-- Action queue panel
-
-## API Assumptions
-
-Frontend expects backend at:
-
-- `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000`)
-
-Read endpoints:
+The dashboard reads/writes to backend endpoints:
 
 - `GET /health`
+- `POST /api/v1/documents/upload`
 - `GET /api/v1/documents`
+- `POST /api/v1/analysis/run`
+- `GET /api/v1/analysis/{analysis_id}`
 - `GET /api/v1/tasks`
+- `GET /api/v1/reports/{analysis_id}/content`
+
+Base URL is configured via:
+
+- `NEXT_PUBLIC_API_BASE_URL`
