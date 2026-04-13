@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from app.core.config import get_settings
 from app.schemas.contracts import AnalysisFinding, AnalysisResult, AnalysisTask
+from app.services.neuro_san_adapter import run_neuro_san_analysis
 
 
 def _heuristic_analysis(merged_text: str) -> AnalysisResult:
@@ -89,6 +91,11 @@ def _heuristic_analysis(merged_text: str) -> AnalysisResult:
 
 
 def run_compliance_analysis(merged_text: str) -> AnalysisResult:
-    # Neuro-SAN/OpenAI orchestration can be wired here.
-    # For hackathon reliability, we keep a deterministic local analyzer as default.
+    settings = get_settings()
+
+    if settings.use_neuro_san:
+        neuro_result = run_neuro_san_analysis(merged_text)
+        if neuro_result is not None:
+            return neuro_result
+
     return _heuristic_analysis(merged_text)
