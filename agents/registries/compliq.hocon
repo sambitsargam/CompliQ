@@ -1,5 +1,9 @@
 {
-    include "agents/registries/llm_config.hocon"
+    "llm_config": {
+        "class": "openai",
+        "model_name": "gpt-5.2",
+        "temperature": 0
+    }
 
     "metadata": {
         "description": "CompliQ multi-agent compliance analysis network for SMEs.",

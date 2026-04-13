@@ -8,6 +8,7 @@ import { API_BASE_URL, fetchJson, fetchText, patchJson, postFile, postJson } fro
 
 type Doc = { id: number; filename: string; created_at: string; content_preview: string };
 type TaskStatus = "open" | "in_progress" | "done";
+type FrameworkId = "SME-BASELINE" | "DATA-PRIVACY" | "INCIDENT-READY";
 type Task = {
   id: number;
   analysis_id: number;
@@ -18,8 +19,37 @@ type Task = {
   status: TaskStatus;
 };
 type Finding = { id: number; title: string; severity: string; evidence: string; recommendation: string };
+type ControlStatus = {
+  control: string;
+  status: "pass" | "gap";
+  severity: string;
+  gap_title: string;
+};
+type FrameworkOption = {
+  id: FrameworkId;
+  label: string;
+  tagline: string;
+};
+type AnalysisRun = {
+  id: number;
+  framework: FrameworkId;
+  status: string;
+  coverage_percent: number;
+  risk_score: number;
+  summary: string;
+  created_at: string;
+};
 
 type Health = { status: string; service: string };
+type NeuroSanStatus = {
+  enabled: boolean;
+  has_api_key: boolean;
+  manifest_path: string;
+  manifest_exists: boolean;
+  tool_path: string;
+  tool_path_exists: boolean;
+  ready: boolean;
+};
 
 type AnalysisSummary = {
   analysis_id: number;
@@ -29,6 +59,7 @@ type AnalysisSummary = {
   findings_count: number;
   tasks_count: number;
   report_path: string;
+  control_status: ControlStatus[];
 };
 
 type AnalysisDetails = {
@@ -42,11 +73,16 @@ type AnalysisDetails = {
   };
   findings: Finding[];
   tasks: Task[];
+  control_status: ControlStatus[];
 };
 
 export default function DashboardPage() {
   const [health, setHealth] = useState<Health | null>(null);
+  const [neuroSan, setNeuroSan] = useState<NeuroSanStatus | null>(null);
+  const [frameworks, setFrameworks] = useState<FrameworkOption[]>([]);
+  const [selectedFramework, setSelectedFramework] = useState<FrameworkId>("SME-BASELINE");
   const [documents, setDocuments] = useState<Doc[]>([]);
+  const [analysisHistory, setAnalysisHistory] = useState<AnalysisRun[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskSearch, setTaskSearch] = useState("");
   const [taskStatusFilter, setTaskStatusFilter] = useState<"all" | TaskStatus>("open");
@@ -59,12 +95,24 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [loadingAnalysisId, setLoadingAnalysisId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const openTasks = useMemo(() => tasks.filter((task) => task.status === "open").length, [tasks]);
   const reportContentUrl = analysisSummary
     ? `${API_BASE_URL}/api/v1/reports/${analysisSummary.analysis_id}/content`
     : "";
+  const reportDownloadUrl = analysisSummary
+    ? `${API_BASE_URL}/api/v1/reports/${analysisSummary.analysis_id}/download`
+    : "";
+  const availableFrameworks: FrameworkOption[] = frameworks.length
+    ? frameworks
+    : [
+        { id: "SME-BASELINE", label: "SME Baseline", tagline: "Balanced controls for core compliance readiness." },
+        { id: "DATA-PRIVACY", label: "Data Privacy", tagline: "Focused on personal data lifecycle and protection controls." },
+        { id: "INCIDENT-READY", label: "Incident Ready", tagline: "Focused on escalation, playbooks, communication, and recovery." }
+      ];
+  const selectedFrameworkInfo = availableFrameworks.find((framework) => framework.id === selectedFramework);
   const filteredTasks = useMemo(() => {
     const query = taskSearch.trim().toLowerCase();
     return tasks.filter((task) => {
@@ -76,14 +124,20 @@ export default function DashboardPage() {
   }, [tasks, taskPriorityFilter, taskSearch, taskStatusFilter]);
 
   const loadDashboard = async () => {
-    const [h, docs, taskItems] = await Promise.all([
+    const [h, docs, taskItems, frameworkOptions, runs, neuroSanStatus] = await Promise.all([
       fetchJson<Health>("/health"),
       fetchJson<Doc[]>("/api/v1/documents"),
-      fetchJson<Task[]>("/api/v1/tasks")
+      fetchJson<Task[]>("/api/v1/tasks"),
+      fetchJson<FrameworkOption[]>("/api/v1/frameworks"),
+      fetchJson<AnalysisRun[]>("/api/v1/analysis?limit=12"),
+      fetchJson<NeuroSanStatus>("/api/v1/neuro-san/status")
     ]);
     setHealth(h);
     setDocuments(docs);
     setTasks(taskItems);
+    setFrameworks(frameworkOptions);
+    setAnalysisHistory(runs);
+    setNeuroSan(neuroSanStatus);
   };
 
   useEffect(() => {
@@ -92,6 +146,16 @@ export default function DashboardPage() {
 
   const refreshActiveAnalysis = async (analysisId: number) => {
     const details = await fetchJson<AnalysisDetails>(`/api/v1/analysis/${analysisId}`);
+    setAnalysisSummary({
+      analysis_id: details.analysis.id,
+      coverage_percent: details.analysis.coverage_percent,
+      risk_score: details.analysis.risk_score,
+      summary: details.analysis.summary,
+      findings_count: details.findings.length,
+      tasks_count: details.tasks.length,
+      report_path: "",
+      control_status: details.control_status
+    });
     setAnalysisDetails(details);
     const report = await fetchText(`/api/v1/reports/${analysisId}/content`);
     setReportContent(report);
@@ -129,7 +193,7 @@ export default function DashboardPage() {
     try {
       const summary = await postJson<AnalysisSummary>("/api/v1/analysis/run", {
         document_ids: selectedDocIds,
-        framework: "SME-BASELINE"
+        framework: selectedFramework
       });
       setAnalysisSummary(summary);
       await refreshActiveAnalysis(summary.analysis_id);
@@ -170,6 +234,19 @@ export default function DashboardPage() {
     }
   };
 
+  const loadAnalysisFromHistory = async (analysisId: number) => {
+    setLoadingAnalysisId(analysisId);
+    setError(null);
+    try {
+      await refreshActiveAnalysis(analysisId);
+      setCopied(false);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoadingAnalysisId(null);
+    }
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-6 py-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -195,7 +272,11 @@ export default function DashboardPage() {
         <StatCard label="Service" value={health?.status === "ok" ? "Healthy" : "Pending"} helper={health?.service ?? "Waiting for backend"} />
         <StatCard label="Documents" value={String(documents.length)} helper="Uploaded for analysis" />
         <StatCard label="Open Tasks" value={String(openTasks)} helper="Pending remediation work (count only)" />
-        <StatCard label="API Base" value="Connected" helper={API_BASE_URL} />
+        <StatCard
+          label="Neuro-SAN"
+          value={neuroSan?.ready ? "Ready" : "Blocked"}
+          helper={neuroSan?.ready ? "Agent path active" : "Strict Neuro-SAN mode required"}
+        />
       </section>
 
       {error && (
@@ -203,6 +284,16 @@ export default function DashboardPage() {
           {error}
         </div>
       )}
+
+      {neuroSan && !neuroSan.ready ? (
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Neuro-SAN readiness is partial. Analysis runs will fail in strict mode until configuration is complete.
+          <div className="mt-2 text-xs text-amber-700">
+            API key: {neuroSan.has_api_key ? "present" : "missing"} • Manifest: {neuroSan.manifest_exists ? "ok" : "missing"} • Tools:{" "}
+            {neuroSan.tool_path_exists ? "ok" : "missing"}
+          </div>
+        </div>
+      ) : null}
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_1.2fr]">
         <SectionCard title="1) Upload & Select Documents">
@@ -227,6 +318,22 @@ export default function DashboardPage() {
                   </label>
                 ))
               )}
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Framework Pack</p>
+              <select
+                value={selectedFramework}
+                onChange={(event) => setSelectedFramework(event.target.value as FrameworkId)}
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-500"
+              >
+                {availableFrameworks.map((framework) => (
+                  <option key={framework.id} value={framework.id}>
+                    {framework.label} ({framework.id})
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-slate-600">{selectedFrameworkInfo?.tagline ?? "Loading framework details..."}</p>
             </div>
 
             <button
@@ -260,6 +367,30 @@ export default function DashboardPage() {
               </div>
 
               <p className="rounded-xl border border-slate-200 p-3 text-sm text-slate-700">{analysisSummary.summary}</p>
+
+              {analysisDetails?.control_status?.length ? (
+                <div>
+                  <h4 className="font-semibold text-ink">Control Scorecard</h4>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {analysisDetails.control_status.map((control) => (
+                      <div key={control.control} className="rounded-xl border border-slate-200 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold text-ink">{control.control}</p>
+                          <span
+                            className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${
+                              control.status === "pass" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {control.status}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">Expected severity if missing: {control.severity}</p>
+                        {control.status === "gap" ? <p className="mt-1 text-xs text-slate-600">Gap mapped: {control.gap_title}</p> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {analysisDetails?.findings?.length ? (
                 <div>
@@ -309,6 +440,12 @@ export default function DashboardPage() {
                     >
                       {copied ? "Copied" : "Copy Report"}
                     </button>
+                    <a
+                      href={reportDownloadUrl}
+                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-500"
+                    >
+                      Download .md
+                    </a>
                   </div>
                   <pre className="mt-2 max-h-80 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
                     {reportContent}
@@ -320,8 +457,41 @@ export default function DashboardPage() {
         </SectionCard>
       </section>
 
+      <section className="mt-8">
+        <SectionCard title="4) Recent Analysis Runs">
+          {analysisHistory.length === 0 ? (
+            <p>No runs yet. Run one analysis to build history.</p>
+          ) : (
+            <div className="space-y-2">
+              {analysisHistory.map((run) => (
+                <div key={run.id} className="rounded-xl border border-slate-200 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-ink">
+                        Run #{run.id} • {run.framework}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Coverage {run.coverage_percent}% • Risk {run.risk_score}/100 • {new Date(run.created_at).toLocaleString()}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600">{run.summary}</p>
+                    </div>
+                    <button
+                      onClick={() => loadAnalysisFromHistory(run.id)}
+                      disabled={loadingAnalysisId === run.id}
+                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loadingAnalysisId === run.id ? "Loading..." : "Load Run"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      </section>
+
       <section id="all-open-tasks" className="mt-8">
-        <SectionCard title="4) All Open Tasks Manager">
+        <SectionCard title="5) All Open Tasks Manager">
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-[2fr_1fr_1fr]">
               <input

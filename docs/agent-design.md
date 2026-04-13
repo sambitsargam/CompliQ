@@ -20,7 +20,7 @@ The Neuro-SAN layer gives CompliQ an agentic reasoning path that can:
 - Use coded tools where numeric normalization/format guarantees are required.
 
 4. Fail-safe integration
-- Any agent failure triggers deterministic backend fallback.
+- Any agent failure surfaces explicit backend error in strict mode.
 
 ## 3. Agent Network Topology
 
@@ -126,7 +126,7 @@ The backend expects this shape from Neuro-SAN:
 }
 ```
 
-Any invalid or unparseable output causes backend fallback.
+Any invalid or unparseable output causes explicit strict-mode failure.
 
 ## 7. Runtime Lifecycle
 
@@ -136,7 +136,7 @@ Any invalid or unparseable output causes backend fallback.
 4. Adapter extracts JSON from text output.
 5. Adapter maps payload to backend schemas.
 6. If any step fails, adapter returns `None`.
-7. Backend executes deterministic analysis path.
+7. Backend returns explicit failure in strict mode, or deterministic local mode when `USE_NEURO_SAN=false`.
 
 ## 8. Quality and Guardrails
 

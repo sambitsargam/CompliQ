@@ -13,6 +13,8 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = None
     use_neuro_san: bool = True
+    agent_manifest_file: str = "../agents/registries/manifest.hocon"
+    agent_tool_path: str = "../agents/coded_tools"
 
     upload_dir: str = "./storage/uploads"
     reports_dir: str = "./storage/reports"

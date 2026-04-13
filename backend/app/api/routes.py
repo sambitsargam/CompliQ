@@ -1,15 +1,16 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from sqlmodel import Session, select
 
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.models.entities import AnalysisRun, Document, Finding, Report, TaskItem
 from app.schemas.contracts import AnalysisRunRequest, TaskUpdateRequest
-from app.services.agent_service import run_compliance_analysis
+from app.services.agent_service import build_control_status, get_supported_frameworks, run_compliance_analysis
 from app.services.document_service import save_upload, safe_preview
+from app.services.neuro_san_adapter import get_neuro_san_status
 from app.services.report_service import build_report_content, save_report
 
 router = APIRouter(prefix="/api/v1", tags=["compliq"])
@@ -52,6 +53,16 @@ def list_documents(session: Session = Depends(get_session)):
     return docs
 
 
+@router.get("/frameworks")
+def list_frameworks():
+    return get_supported_frameworks()
+
+
+@router.get("/neuro-san/status")
+def neuro_san_status():
+    return get_neuro_san_status()
+
+
 @router.post("/analysis/run")
 def run_analysis(payload: AnalysisRunRequest, session: Session = Depends(get_session)):
     docs = session.exec(select(Document).where(Document.id.in_(payload.document_ids))).all()
@@ -59,7 +70,11 @@ def run_analysis(payload: AnalysisRunRequest, session: Session = Depends(get_ses
         raise HTTPException(status_code=404, detail="No documents found for given IDs")
 
     merged_text = "\n\n".join(doc.content_full for doc in docs)
-    result = run_compliance_analysis(merged_text)
+    try:
+        result = run_compliance_analysis(merged_text, payload.framework)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=f"Neuro-SAN failed: {exc}") from exc
+    control_status = build_control_status(payload.framework, result.findings)
 
     analysis = AnalysisRun(
         framework=payload.framework,
@@ -107,7 +122,15 @@ def run_analysis(payload: AnalysisRunRequest, session: Session = Depends(get_ses
         "findings_count": len(result.findings),
         "tasks_count": len(result.tasks),
         "report_path": report_path,
+        "control_status": control_status,
     }
+
+
+@router.get("/analysis")
+def list_analysis_runs(limit: int = 20, session: Session = Depends(get_session)):
+    safe_limit = min(max(limit, 1), 100)
+    query = select(AnalysisRun).order_by(AnalysisRun.created_at.desc()).limit(safe_limit)
+    return session.exec(query).all()
 
 
 @router.get("/analysis/{analysis_id}")
@@ -118,11 +141,13 @@ def get_analysis(analysis_id: int, session: Session = Depends(get_session)):
 
     findings = session.exec(select(Finding).where(Finding.analysis_id == analysis_id)).all()
     tasks = session.exec(select(TaskItem).where(TaskItem.analysis_id == analysis_id)).all()
+    control_status = build_control_status(analysis.framework, findings)
 
     return {
         "analysis": analysis,
         "findings": findings,
         "tasks": tasks,
+        "control_status": control_status,
     }
 
 
@@ -173,3 +198,20 @@ def get_report_content(analysis_id: int, session: Session = Depends(get_session)
         raise HTTPException(status_code=404, detail="Report file missing")
 
     return report_path.read_text(encoding="utf-8")
+
+
+@router.get("/reports/{analysis_id}/download")
+def download_report(analysis_id: int, session: Session = Depends(get_session)):
+    report = session.exec(select(Report).where(Report.analysis_id == analysis_id)).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    report_path = Path(report.report_path)
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Report file missing")
+
+    return FileResponse(
+        path=report_path,
+        media_type="text/markdown",
+        filename=report_path.name,
+    )

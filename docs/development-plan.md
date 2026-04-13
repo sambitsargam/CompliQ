@@ -104,10 +104,10 @@ Deliverables:
 - Neuro-SAN registry definitions
 - coded tools
 - backend adapter
-- fallback logic
+- strict error handling logic
 
 Done criteria:
-- backend attempts Neuro-SAN and safely falls back when needed
+- backend attempts Neuro-SAN and returns explicit failures in strict mode
 
 ## Step 9: Landing Page and Dashboard UI
 
@@ -178,5 +178,5 @@ This keeps progress auditable and avoids last-minute integration debt.
 
 - keep API contracts stable once frontend integration starts
 - avoid introducing non-essential dependencies late
-- keep fallback path intact until end of event
+- keep strict timeout and clear error path intact until end of event
 - keep docs updated in same commit as code changes

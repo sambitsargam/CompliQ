@@ -7,7 +7,7 @@ The backend is the execution core of CompliQ. It handles document ingestion, ana
 The backend service is responsible for:
 1. Accepting document uploads.
 2. Persisting raw text and metadata.
-3. Running compliance analysis (Neuro-SAN first, deterministic fallback).
+3. Running compliance analysis (strict Neuro-SAN mode by default, optional deterministic local mode).
 4. Persisting findings, tasks, and report references.
 5. Serving dashboard-ready APIs.
 
@@ -104,7 +104,8 @@ Detailed request/response contracts are documented in `../docs/api-reference.md`
 `run_compliance_analysis(merged_text)` executes with this order:
 1. If `USE_NEURO_SAN=true`, attempt `run_neuro_san_analysis`.
 2. If agent output is valid, return it.
-3. If agent call fails, run deterministic heuristic checks.
+3. If agent call fails, return explicit `502` via API (strict mode).
+4. If `USE_NEURO_SAN=false`, run deterministic heuristic checks.
 
 Deterministic checks currently evaluate presence/absence of:
 - policy ownership language

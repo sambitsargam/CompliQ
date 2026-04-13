@@ -15,7 +15,7 @@ Primary goals for hackathon MVP:
 1. Deliver a complete upload-to-report workflow.
 2. Provide interpretable outputs (evidence + recommendations).
 3. Demonstrate agentic orchestration with Neuro-SAN.
-4. Preserve runtime reliability through deterministic fallback.
+4. Preserve runtime reliability through strict timeouts and explicit failures.
 5. Keep local setup simple (no Docker requirement).
 
 ## 3. Stakeholders
@@ -104,8 +104,8 @@ Acceptance criteria:
 
 ### NFR-3 Reliability
 
-- System must return output even if agent path fails.
-- Fallback behavior should be deterministic for same input.
+- System must fail fast with explicit reason if strict Neuro-SAN path fails.
+- Optional deterministic local mode (`USE_NEURO_SAN=false`) should remain deterministic for same input.
 
 ### NFR-4 Security Hygiene
 
@@ -136,7 +136,7 @@ Acceptance criteria:
 ## 8. Risks and Mitigations
 
 1. LLM/agent instability
-- Mitigation: deterministic fallback engine
+- Mitigation: strict timeout guard + optional deterministic local mode
 
 2. Time-limited hackathon execution
 - Mitigation: strict MVP boundaries and incremental delivery

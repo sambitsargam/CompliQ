@@ -44,8 +44,8 @@ flowchart LR
 2. Frontend calls `POST /api/v1/analysis/run`.
 3. Backend loads selected documents and merges text.
 4. Backend invokes analysis service:
-- Neuro-SAN first (if enabled)
-- Deterministic heuristic fallback on failure
+- Neuro-SAN strict path (if enabled)
+- Deterministic local mode only when explicitly disabled
 5. Backend persists:
 - `AnalysisRun`
 - `Finding[]`
@@ -66,11 +66,10 @@ This separation keeps UI and agent experimentation decoupled from persistence co
 
 ## 6. Resilience Model
 
-Primary resilience mechanism is two-path analysis:
+Primary resilience mechanism is strict agent execution plus optional local mode:
 1. Agentic path for richer semantic reasoning.
-2. Deterministic path for guaranteed continuity.
-
-If agent output is missing or invalid JSON, backend still returns complete analysis shape. This ensures judges always see a result in live demo conditions.
+2. Explicit strict-mode errors when Neuro-SAN output is missing/invalid.
+3. Deterministic local mode for deliberate backup demos (`USE_NEURO_SAN=false`).
 
 ## 7. Security and Secrets
 
@@ -96,6 +95,6 @@ Long-term improvements:
 
 1. FastAPI + SQLite chosen for delivery speed.
 2. Neuro-SAN integration preserved for agentic score potential.
-3. Deterministic fallback added for reliability.
+3. Strict Neuro-SAN behavior with timeout guard added for reliability.
 4. REST contracts kept stable for frontend iteration.
 5. Report persisted as file + metadata for easy demo retrieval.

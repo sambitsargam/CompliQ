@@ -92,18 +92,19 @@ Pass criteria:
 6. Expand findings with evidence/recommendations.
 7. Show generated remediation tasks.
 8. Show report content as exportable artifact.
-9. Mention Neuro-SAN + fallback architecture for reliability.
+9. Mention Neuro-SAN strict mode + explicit error visibility.
 
 ## 7. Contingency Playbook
 
 ### Case A: Neuro-SAN fails or times out
 
 Action:
-- keep `USE_NEURO_SAN=true` if fallback is already working
-- rerun analysis and continue demo using deterministic output
+- keep `USE_NEURO_SAN=true` to show strict agentic behavior
+- if needed for backup demo, set `USE_NEURO_SAN=false` to use local deterministic mode
+- rerun analysis and explain mode switch clearly
 
 Message to judges:
-- architecture supports advanced agentic path with deterministic resilience
+- architecture supports strict agentic execution with a transparent backup mode
 
 ### Case B: Backend unreachable from frontend
 

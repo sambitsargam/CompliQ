@@ -13,7 +13,7 @@ Delivered:
 - action planning tasks
 - report generation and retrieval
 - landing page + dashboard
-- Neuro-SAN integration with deterministic fallback
+- Neuro-SAN integration with strict error handling
 
 Success criteria:
 - complete flow demo in under 2 minutes

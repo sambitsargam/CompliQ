@@ -15,7 +15,7 @@ Use this checklist before final hackathon submission.
 - [ ] Backend starts and `/health` returns `ok`.
 - [ ] Frontend connects to backend without CORS issues.
 - [ ] SQLite persistence works across multiple runs.
-- [ ] Neuro-SAN path configured (or fallback confirmed working).
+- [ ] Neuro-SAN path configured and ready state verified.
 - [ ] `.env` ignored and `.env.example` present.
 
 ## 3. Documentation Readiness
@@ -54,7 +54,7 @@ Evidence:
 ### Reliability and Demo Strength
 
 Evidence:
-- deterministic fallback path
+- strict timeout + explicit Neuro-SAN error path
 - documented runbook and troubleshooting
 - stable local setup without Docker dependency
 
@@ -71,7 +71,7 @@ Evidence:
 - [ ] Duration kept concise (typically 2-4 minutes)
 - [ ] Shows real upload and analysis execution
 - [ ] Narrates output interpretation (coverage/risk/findings/tasks)
-- [ ] Mentions agentic architecture and fallback reliability
+- [ ] Mentions agentic architecture and strict runtime safeguards
 - [ ] Ends with impact statement for SMEs
 
 ## 7. Final Quality Gate (Last 30 Minutes)

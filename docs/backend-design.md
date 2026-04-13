@@ -39,7 +39,7 @@ The backend is designed to maximize:
 
 `app/services/agent_service.py`
 - analysis orchestration decision
-- Neuro-SAN first, deterministic fallback second
+- strict Neuro-SAN mode with optional deterministic local mode
 
 `app/services/neuro_san_adapter.py`
 - Neuro-SAN session setup
@@ -143,9 +143,9 @@ Advantages:
 - richer semantic reasoning
 - clear multi-agent architecture for judges
 
-### 5.2 Deterministic fallback path
+### 5.2 Optional deterministic local mode
 
-If Neuro-SAN fails, backend runs keyword-based checks across five control domains:
+If `USE_NEURO_SAN=false`, backend runs keyword-based checks across five control domains:
 - ownership
 - review cadence
 - incident escalation
@@ -158,7 +158,7 @@ Outputs include calculated:
 - findings list
 - tasks list
 
-### 5.3 Why both paths
+### 5.3 Why both modes
 
 This dual-path design allows advanced capability without sacrificing demo reliability.
 
@@ -177,7 +177,7 @@ This provides both persistent artifact and immediate UI visibility.
 - Missing documents for selected IDs: `404`
 - Missing analysis/report records: `404`
 - Missing report file: `404`
-- Agent runtime/parse failures: handled internally, fallback path used
+- Agent runtime/parse failures: explicit `502` in strict mode
 
 UI-facing errors stay concise while backend remains resilient.
 

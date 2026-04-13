@@ -1,9 +1,11 @@
 from pathlib import Path
 
 from app.schemas.contracts import AnalysisResult
+from app.services.agent_service import build_control_status
 
 
 def build_report_content(analysis_id: int, framework: str, result: AnalysisResult) -> str:
+    control_status = build_control_status(framework, result.findings)
     lines = [
         "# CompliQ Audit Summary",
         "",
@@ -15,8 +17,21 @@ def build_report_content(analysis_id: int, framework: str, result: AnalysisResul
         "## Summary",
         result.summary,
         "",
-        "## Findings",
+        "## Control Scorecard",
     ]
+
+    for i, control in enumerate(control_status, start=1):
+        lines.append(
+            f"{i}. {control['control']}: {control['status'].upper()} "
+            f"(expected severity if missing: {control['severity'].upper()})"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Findings",
+        ]
+    )
 
     for i, finding in enumerate(result.findings, start=1):
         lines.extend(

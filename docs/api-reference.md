@@ -75,7 +75,52 @@ Success response (`200`):
 ]
 ```
 
-## 3. Analysis
+## 3. Frameworks and Agent Readiness
+
+### `GET /api/v1/frameworks`
+
+Purpose:
+- list available framework packs supported by analyzer
+
+Success response (`200`):
+
+```json
+[
+  {
+    "id": "SME-BASELINE",
+    "label": "SME Baseline",
+    "tagline": "Balanced controls for policy ownership, reviews, incidents, retention, and access."
+  },
+  {
+    "id": "DATA-PRIVACY",
+    "label": "Data Privacy",
+    "tagline": "Focused on personal data lifecycle, rights handling, and protection controls."
+  }
+]
+```
+
+### `GET /api/v1/neuro-san/status`
+
+Purpose:
+- return Neuro-SAN readiness signal for safe runtime handling
+
+Success response (`200`):
+
+```json
+{
+  "enabled": true,
+  "has_api_key": false,
+  "manifest_path": ".../agents/registries/manifest.hocon",
+  "manifest_exists": true,
+  "tool_path": ".../agents/coded_tools",
+  "tool_path_exists": true,
+  "ready": false
+}
+```
+
+`ready=false` means Neuro-SAN-required runs will fail with `502` until configuration is complete.
+
+## 4. Analysis
 
 ### `POST /api/v1/analysis/run`
 
@@ -101,13 +146,29 @@ Success response (`200`):
   "summary": "CompliQ scanned policy artifacts...",
   "findings_count": 3,
   "tasks_count": 3,
-  "report_path": "./storage/reports/compliq_report_9.md"
+  "report_path": "./storage/reports/compliq_report_9.md",
+  "control_status": [
+    {
+      "control": "Policy Ownership",
+      "status": "gap",
+      "severity": "high",
+      "gap_title": "Policy ownership missing"
+    }
+  ]
 }
 ```
 
 Common errors:
 - `404` with `"No documents found for given IDs"` when IDs are invalid
 - `422` when request shape is invalid
+
+### `GET /api/v1/analysis`
+
+Purpose:
+- list recent analysis runs (for dashboard history)
+
+Optional query params:
+- `limit` (1-100, default 20)
 
 ### `GET /api/v1/analysis/{analysis_id}`
 
@@ -150,6 +211,14 @@ Success response (`200`):
       "due_in_days": 7,
       "status": "open"
     }
+  ],
+  "control_status": [
+    {
+      "control": "Policy Ownership",
+      "status": "gap",
+      "severity": "high",
+      "gap_title": "Policy ownership missing"
+    }
   ]
 }
 ```
@@ -157,7 +226,7 @@ Success response (`200`):
 Common errors:
 - `404` with `"Analysis not found"`
 
-## 4. Tasks
+## 5. Tasks
 
 ### `GET /api/v1/tasks`
 
@@ -166,6 +235,7 @@ Purpose:
 
 Optional query params:
 - `analysis_id` (integer)
+- `status` (`open`, `in_progress`, `done`)
 
 Success response (`200`):
 
@@ -183,7 +253,25 @@ Success response (`200`):
 ]
 ```
 
-## 5. Reports
+### `PATCH /api/v1/tasks/{task_id}`
+
+Purpose:
+- update task status for workflow execution
+
+Request body:
+
+```json
+{
+  "status": "in_progress"
+}
+```
+
+Allowed status values:
+- `open`
+- `in_progress`
+- `done`
+
+## 6. Reports
 
 ### `GET /api/v1/reports/{analysis_id}`
 
@@ -217,7 +305,16 @@ Common errors:
 - `404` with `"Report not found"`
 - `404` with `"Report file missing"`
 
-## 6. Error Format
+### `GET /api/v1/reports/{analysis_id}/download`
+
+Purpose:
+- download generated markdown report as attachment
+
+Success response (`200`):
+- content type: `text/markdown`
+- includes `Content-Disposition: attachment; filename="compliq_report_<id>.md"`
+
+## 7. Error Format
 
 FastAPI default error payload shape:
 
@@ -229,11 +326,11 @@ FastAPI default error payload shape:
 
 Validation errors (`422`) follow FastAPI validation structure.
 
-## 7. Contract Stability Notes
+## 8. Contract Stability Notes
 
 Stable fields expected by current frontend:
 - analysis summary keys from `/analysis/run`
-- nested `analysis`, `findings`, `tasks` from `/analysis/{id}`
+- nested `analysis`, `findings`, `tasks`, `control_status` from `/analysis/{id}`
 - text payload from `/reports/{id}/content`
 
 If backend contracts change, frontend `lib/api.ts` and dashboard state types must be updated in same commit.

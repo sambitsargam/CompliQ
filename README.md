@@ -117,16 +117,17 @@ Frontend should be available at `http://localhost:3000`.
 4. Run analysis.
 5. Review findings/tasks/report content.
 
-## Runtime Behavior: Neuro-SAN and Fallback
+## Runtime Behavior: Neuro-SAN Modes
 
 CompliQ analysis follows this logic:
-1. If `USE_NEURO_SAN=true`, backend tries Neuro-SAN orchestration.
+1. If `USE_NEURO_SAN=true`, backend requires Neuro-SAN orchestration.
 2. If Neuro-SAN succeeds and returns valid JSON, that result is used.
-3. If Neuro-SAN fails or output is invalid, backend falls back to deterministic rule-based analysis.
+3. If Neuro-SAN fails or output is invalid, backend returns explicit `502` error.
+4. If `USE_NEURO_SAN=false`, backend uses optional deterministic local mode.
 
 This design gives both:
 - agentic architecture for innovation scoring
-- deterministic reliability for live demo safety
+- strict Neuro-SAN execution when enabled
 
 ## API Overview
 
@@ -135,11 +136,16 @@ Core endpoints:
 - `GET /api/v1/health`
 - `POST /api/v1/documents/upload`
 - `GET /api/v1/documents`
+- `GET /api/v1/frameworks`
+- `GET /api/v1/neuro-san/status`
 - `POST /api/v1/analysis/run`
+- `GET /api/v1/analysis`
 - `GET /api/v1/analysis/{analysis_id}`
 - `GET /api/v1/tasks`
+- `PATCH /api/v1/tasks/{task_id}`
 - `GET /api/v1/reports/{analysis_id}`
 - `GET /api/v1/reports/{analysis_id}/content`
+- `GET /api/v1/reports/{analysis_id}/download`
 
 Full contract details are in `docs/api-reference.md`.
 
@@ -168,7 +174,10 @@ MVP included now:
 - Upload, analyze, findings, tasks, report flow
 - Landing page + dashboard
 - Persistent data model in SQLite
-- Neuro-SAN adapter with fallback path
+- Neuro-SAN adapter with strict timeout + explicit error path
+- Framework packs (`SME-BASELINE`, `DATA-PRIVACY`, `INCIDENT-READY`)
+- Control scorecard and analysis run history
+- Startup-style task manager with status workflow (`open`, `in_progress`, `done`)
 
 Planned next:
 - Authentication and role-based access

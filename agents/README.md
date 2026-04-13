@@ -117,16 +117,16 @@ The backend service `run_neuro_san_analysis`:
 5. Extracts JSON payload from plain text response.
 6. Converts payload into backend `AnalysisResult` schema.
 
-If any step fails, `None` is returned and fallback logic executes.
+If any step fails, `None` is returned so strict mode can surface an explicit error.
 
 ## Reliability Strategy
 
 To keep live demos safe:
-- Agent path is optional at runtime.
-- Deterministic path always exists.
+- Agent path is strict by default (`USE_NEURO_SAN=true`).
+- Deterministic local mode is available when explicitly toggled (`USE_NEURO_SAN=false`).
 - API contracts are identical for both paths.
 
-This prevents frontend breakage even during external model/runtime instability.
+This keeps behavior explicit even during external model/runtime instability.
 
 ## Extension Guidance
 
@@ -147,6 +147,6 @@ To improve the network after hackathon:
 - Ensure frontman instruction is strict JSON only.
 - Keep formatter tool in frontman tool list.
 
-3. If backend always falls back:
+3. If backend keeps failing in strict mode:
 - Temporarily log adapter exceptions in `backend/app/services/neuro_san_adapter.py`.
 - Confirm `USE_NEURO_SAN=true` in effective environment.
