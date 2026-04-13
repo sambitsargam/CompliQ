@@ -39,7 +39,7 @@ backend/
 
 ```bash
 cd backend
-python -m venv .venv
+python3.13 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -67,6 +67,7 @@ Values are loaded from `.env` via `pydantic-settings`.
 - `OPENAI_API_KEY` for agentic LLM path
 - `AGENT_MANIFEST_FILE` default expected: `../agents/registries/manifest.hocon`
 - `AGENT_TOOL_PATH` default expected: `../agents/coded_tools`
+- `NEURO_SAN_MP_START_METHOD` default: `spawn` (recommended for Python 3.13)
 - `CORS_ORIGINS` default: `http://localhost:3000`
 
 ## Runtime Paths

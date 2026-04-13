@@ -124,6 +124,7 @@ CompliQ analysis follows this logic:
 2. If Neuro-SAN succeeds and returns valid JSON, that result is used.
 3. If Neuro-SAN fails or output is invalid, backend returns explicit `502` error.
 4. If `USE_NEURO_SAN=false`, backend uses optional deterministic local mode.
+5. Neuro-SAN worker process defaults to multiprocessing `spawn` mode (`NEURO_SAN_MP_START_METHOD=spawn`).
 
 This design gives both:
 - agentic architecture for innovation scoring

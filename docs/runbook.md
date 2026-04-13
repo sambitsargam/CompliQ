@@ -5,7 +5,7 @@ This runbook is for hackathon demo day and local validation.
 ## 1. Prerequisites
 
 Required tools:
-- Python 3.11+
+- Python 3.13+
 - Node.js 18+
 - npm
 
@@ -26,6 +26,12 @@ Set at least:
 OPENAI_API_KEY=your_openai_api_key_here
 USE_NEURO_SAN=true
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+Optional for Neuro-SAN worker behavior:
+
+```env
+NEURO_SAN_MP_START_METHOD=spawn
 ```
 
 Optional but recommended for backend started from `backend/`:

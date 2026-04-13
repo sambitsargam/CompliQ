@@ -1,12 +1,17 @@
 {
+    "request_timeout_seconds": 20,
+    "max_execution_seconds": 30,
+    "max_iterations": 6,
+    "max_steps": 12,
+
     "llm_config": {
         "class": "openai",
-        "model_name": "gpt-5.2",
+        "model_name": "gpt-4o-mini",
         "temperature": 0
     }
 
     "metadata": {
-        "description": "CompliQ multi-agent compliance analysis network for SMEs.",
+        "description": "CompliQ compliance analyzer network for SMEs.",
         "sample_queries": [
             "Analyze these policy snippets and return gaps with risk and action plan in JSON."
         ]
@@ -16,103 +21,23 @@
         {
             "name": "ComplianceFrontman",
             "function": {
-                "description": "Top-level compliance orchestrator. Always return strict JSON output."
+                "description": "Top-level compliance analyzer. Returns strict JSON only."
             },
             "instructions": """
-You are CompliQ's chief compliance orchestrator.
+You are CompliQ's compliance analyzer.
+
+Return strict JSON only with keys:
+coverage_percent, risk_score, summary, findings, tasks.
 
 Rules:
-1) You must delegate to specialist agents before finalizing.
-2) Always return strict JSON with keys:
-   coverage_percent, risk_score, summary, findings, tasks.
-3) findings is a list of objects with keys:
-   title, severity, evidence, recommendation.
-4) tasks is a list of objects with keys:
-   title, owner, priority, due_in_days.
-5) severity values must be: high | medium | low.
-6) priority values must be: P1 | P2 | P3.
-7) No markdown, no prose outside JSON.
+1) findings is an array of objects with: title, severity, evidence, recommendation.
+2) tasks is an array of objects with: title, owner, priority, due_in_days.
+3) severity must be one of: high, medium, low.
+4) priority must be one of: P1, P2, P3.
+5) Base analysis on framework context in user prompt.
+6) No markdown. No extra text outside JSON.
 """,
-            "tools": [
-                "DocParserAgent",
-                "RuleMapperAgent",
-                "GapDetectorAgent",
-                "RiskScorerAgent",
-                "ActionPlannerAgent",
-                "ReportFormatterTool"
-            ]
-        },
-        {
-            "name": "DocParserAgent",
-            "function": {
-                "description": "Extracts controls, obligations and policy evidence from text."
-            },
-            "instructions": "Extract policy obligations, ownership, review cadence, incident response, data retention, and access control evidence from the user input."
-        },
-        {
-            "name": "RuleMapperAgent",
-            "function": {
-                "description": "Maps extracted evidence into compliance control buckets."
-            },
-            "instructions": "Map extracted evidence to controls: ownership, periodic review, incident handling, retention, access governance."
-        },
-        {
-            "name": "GapDetectorAgent",
-            "function": {
-                "description": "Identifies missing or weak controls and creates findings."
-            },
-            "instructions": "Identify missing controls and produce concise finding candidates with severity and recommendations."
-        },
-        {
-            "name": "RiskScorerAgent",
-            "function": {
-                "description": "Computes compliance coverage and risk score from findings."
-            },
-            "instructions": "Use RiskScoringTool if needed. Normalize to coverage_percent (0-100) and risk_score (0-100)."
-            ,
-            "tools": ["RiskScoringTool"]
-        },
-        {
-            "name": "ActionPlannerAgent",
-            "function": {
-                "description": "Converts findings into execution-ready remediation tasks."
-            },
-            "instructions": "For each finding produce one task with owner, priority, and due_in_days."
-        },
-        {
-            "name": "RiskScoringTool",
-            "function": {
-                "description": "Deterministic helper to normalize coverage and risk based on severity counts.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "high": {"type": "integer"},
-                        "medium": {"type": "integer"},
-                        "low": {"type": "integer"},
-                        "total_controls": {"type": "integer"}
-                    },
-                    "required": ["high", "medium", "low", "total_controls"]
-                }
-            },
-            "class": "compliq.risk_scoring.RiskScoringTool"
-        },
-        {
-            "name": "ReportFormatterTool",
-            "function": {
-                "description": "Formats a strict JSON compliance report.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "summary": {"type": "string"},
-                        "coverage_percent": {"type": "number"},
-                        "risk_score": {"type": "number"},
-                        "findings": {"type": "array"},
-                        "tasks": {"type": "array"}
-                    },
-                    "required": ["summary", "coverage_percent", "risk_score", "findings", "tasks"]
-                }
-            },
-            "class": "compliq.report_formatter.ReportFormatterTool"
+            "max_execution_seconds": 20
         }
     ]
 }

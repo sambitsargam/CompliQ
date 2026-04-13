@@ -185,8 +185,11 @@ def run_neuro_san_analysis(merged_text: str, framework: str = "SME-BASELINE") ->
         _LAST_NEURO_SAN_ERROR = f"AGENT_TOOL_PATH not found: {resolved_tools}"
         return None
 
+    start_method = os.environ.get("NEURO_SAN_MP_START_METHOD", "spawn").strip().lower()
+    if start_method not in {"spawn", "fork", "forkserver"}:
+        start_method = "spawn"
     try:
-        context = get_context("fork")
+        context = get_context(start_method)
     except ValueError:
         context = get_context("spawn")
     result_queue = context.Queue(maxsize=1)
