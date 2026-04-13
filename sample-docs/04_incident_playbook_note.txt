@@ -1,0 +1,6 @@
+Incident Handling Note
+
+If an incident is detected, the team must trigger escalation to the incident coordinator.
+Potential breach events must be logged and communicated to leadership immediately.
+
+This note is operational and does not define broader governance sections.

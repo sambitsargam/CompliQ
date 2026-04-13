@@ -1,0 +1,8 @@
+Company Policy Draft
+
+This document explains that teams should follow good practices and keep systems safe.
+All departments are expected to cooperate and improve process quality over time.
+The policy does not define concrete governance language.
+
+Employees should be careful with business information and report unusual behavior to managers.
+Process updates can be made whenever leadership decides.

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -26,3 +28,7 @@ class AnalysisResult(BaseModel):
     summary: str
     findings: list[AnalysisFinding]
     tasks: list[AnalysisTask]
+
+
+class TaskUpdateRequest(BaseModel):
+    status: Literal["open", "in_progress", "done"]

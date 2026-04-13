@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.models.entities import AnalysisRun, Document, Finding, Report, TaskItem
-from app.schemas.contracts import AnalysisRunRequest
+from app.schemas.contracts import AnalysisRunRequest, TaskUpdateRequest
 from app.services.agent_service import run_compliance_analysis
 from app.services.document_service import save_upload, safe_preview
 from app.services.report_service import build_report_content, save_report
@@ -127,11 +127,31 @@ def get_analysis(analysis_id: int, session: Session = Depends(get_session)):
 
 
 @router.get("/tasks")
-def list_tasks(analysis_id: int | None = None, session: Session = Depends(get_session)):
+def list_tasks(
+    analysis_id: int | None = None,
+    status: str | None = None,
+    session: Session = Depends(get_session),
+):
     query = select(TaskItem)
     if analysis_id is not None:
         query = query.where(TaskItem.analysis_id == analysis_id)
+    if status is not None:
+        query = query.where(TaskItem.status == status)
+    query = query.order_by(TaskItem.id.desc())
     return session.exec(query).all()
+
+
+@router.patch("/tasks/{task_id}")
+def update_task(task_id: int, payload: TaskUpdateRequest, session: Session = Depends(get_session)):
+    task = session.get(TaskItem, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task.status = payload.status
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
 
 
 @router.get("/reports/{analysis_id}")
