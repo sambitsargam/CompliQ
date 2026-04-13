@@ -1,18 +1,67 @@
 # CompliQ Backend Design
 
-## 1. Service Boundaries
+## 1. Design Objectives
 
-The backend service is responsible for:
+The backend is designed to maximize:
+- Reliability under hackathon demo conditions
+- Clear and stable API contracts for frontend integration
+- Easy extension toward richer agentic analysis
+- Fast local setup without infrastructure overhead
 
-1. Upload management and text capture
-2. Persistence of analysis artifacts
-3. Compliance scoring and finding generation
-4. Report generation and lookup
+## 2. Module Boundaries
 
-## 2. Data Model
+`app/main.py`
+- FastAPI bootstrap
+- global startup initialization
+- top-level health endpoint
+- API router include
+
+`app/core/config.py`
+- environment-backed settings
+- feature flags (`USE_NEURO_SAN`)
+- runtime directory paths
+
+`app/core/database.py`
+- SQLModel engine creation
+- session factory and dependency injection
+- DB initialization helpers
+
+`app/models/entities.py`
+- persistent entities for documents, runs, findings, tasks, reports
+
+`app/schemas/contracts.py`
+- request and response contract classes
+- typed analysis payload shape
+
+`app/services/document_service.py`
+- upload handling
+- content extraction and safe preview generation
+
+`app/services/agent_service.py`
+- analysis orchestration decision
+- Neuro-SAN first, deterministic fallback second
+
+`app/services/neuro_san_adapter.py`
+- Neuro-SAN session setup
+- response streaming + JSON extraction
+- schema adaptation into backend contract
+
+`app/services/report_service.py`
+- markdown report content builder
+- report file persistence
+
+`app/api/routes.py`
+- route handlers
+- DB writes/reads
+- API response shaping
+
+## 3. Data Model
 
 ### Document
 
+Purpose: source artifact uploaded by user.
+
+Key fields:
 - `id`
 - `filename`
 - `file_path`
@@ -22,6 +71,9 @@ The backend service is responsible for:
 
 ### AnalysisRun
 
+Purpose: one execution of compliance analysis.
+
+Key fields:
 - `id`
 - `framework`
 - `status`
@@ -32,6 +84,9 @@ The backend service is responsible for:
 
 ### Finding
 
+Purpose: a specific control gap identified in a run.
+
+Key fields:
 - `id`
 - `analysis_id`
 - `title`
@@ -41,6 +96,9 @@ The backend service is responsible for:
 
 ### TaskItem
 
+Purpose: remediation work item derived from findings.
+
+Key fields:
 - `id`
 - `analysis_id`
 - `title`
@@ -51,61 +109,116 @@ The backend service is responsible for:
 
 ### Report
 
+Purpose: persistent reference to generated report artifact.
+
+Key fields:
 - `id`
 - `analysis_id`
 - `report_path`
 - `created_at`
 
-## 3. API Contracts
+## 4. API Contract Design
 
-### `POST /api/v1/documents/upload`
+Design principles:
+- Keep contracts explicit and frontend-friendly.
+- Return predictable shapes for dashboard rendering.
+- Keep analysis summary route lightweight and details route rich.
 
-- Input: multipart file
-- Output: stored document metadata
+Main endpoints:
+- `POST /api/v1/documents/upload`
+- `GET /api/v1/documents`
+- `POST /api/v1/analysis/run`
+- `GET /api/v1/analysis/{analysis_id}`
+- `GET /api/v1/tasks`
+- `GET /api/v1/reports/{analysis_id}`
+- `GET /api/v1/reports/{analysis_id}/content`
 
-### `GET /api/v1/documents`
+## 5. Analysis Engine Behavior
 
-- Output: list of all uploaded documents
+### 5.1 Neuro-SAN path
 
-### `POST /api/v1/analysis/run`
+When enabled, backend attempts Neuro-SAN orchestration and expects strict JSON output.
 
-- Input: `{ document_ids: number[], framework: string }`
-- Output: analysis summary, risk and report path
+Advantages:
+- richer semantic reasoning
+- clear multi-agent architecture for judges
 
-### `GET /api/v1/analysis/{analysis_id}`
+### 5.2 Deterministic fallback path
 
-- Output: run metadata + findings + tasks
+If Neuro-SAN fails, backend runs keyword-based checks across five control domains:
+- ownership
+- review cadence
+- incident escalation
+- retention
+- access control
 
-### `GET /api/v1/tasks`
+Outputs include calculated:
+- coverage percentage
+- weighted risk score
+- findings list
+- tasks list
 
-- Optional query: `analysis_id`
-- Output: task list
+### 5.3 Why both paths
 
-### `GET /api/v1/reports/{analysis_id}`
+This dual-path design allows advanced capability without sacrificing demo reliability.
 
-- Output: report metadata/path
+## 6. Report Generation Strategy
 
-## 4. Analysis Engine
+After each run:
+1. backend generates markdown report content from analysis result
+2. writes file to `storage/reports`
+3. stores report path in `Report` table
+4. exposes metadata and full content via dedicated APIs
 
-The MVP includes a deterministic rule-based analyzer:
+This provides both persistent artifact and immediate UI visibility.
 
-- Detects missing ownership language
-- Detects missing review cadence
-- Detects missing incident handling
-- Detects missing retention language
-- Detects missing access controls
+## 7. Error Handling Strategy
 
-From these controls it computes:
+- Missing documents for selected IDs: `404`
+- Missing analysis/report records: `404`
+- Missing report file: `404`
+- Agent runtime/parse failures: handled internally, fallback path used
 
-- Coverage percent
-- Risk score
-- Findings list
-- Task list
+UI-facing errors stay concise while backend remains resilient.
 
-## 5. Agent Extension Plan
+## 8. Performance Considerations
 
-The deterministic engine is intentionally structured for replacement by Neuro-SAN outputs:
+Current MVP is optimized for small-to-medium policy text payloads.
 
-- `run_compliance_analysis()` becomes orchestration adapter.
-- Findings/tasks schemas remain stable.
-- Storage and API contracts remain unchanged.
+Potential bottlenecks for scale:
+- large file uploads
+- repeated full-text merges
+- synchronous analysis execution on request thread
+
+Post-MVP mitigations:
+- async task queue
+- chunked parsing
+- result caching per document fingerprint
+
+## 9. Security Considerations
+
+- API keys loaded from env only
+- `.env` excluded from source control
+- upload directory should be scanned/sanitized in production
+- auth and tenant isolation required before real-world deployment
+
+## 10. Testing Strategy
+
+Minimum validation included:
+- health endpoint test
+- compile sanity checks
+
+Recommended additions:
+- route integration tests with test DB
+- deterministic analysis snapshot tests
+- Neuro-SAN adapter contract tests with mocked stream output
+- report generation content assertions
+
+## 11. Extension Guide
+
+High-value backend extensions:
+1. Add framework parameterization with custom control sets.
+2. Add pagination/filtering for tasks and findings.
+3. Add report export formats (PDF/CSV).
+4. Add audit trail for analysis execution and task updates.
+5. Add user/org scoping with authentication.

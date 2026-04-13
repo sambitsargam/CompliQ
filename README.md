@@ -1,68 +1,91 @@
 # CompliQ
 
-CompliQ is an AI-powered compliance copilot for small and medium businesses (SMEs). It helps teams ingest policies and contracts, detect gaps, prioritize risks, and produce a remediation action plan with an audit-ready report.
+CompliQ is an AI-powered compliance copilot for small and medium businesses (SMEs).
 
-This repository contains a complete full-stack project:
+It helps teams convert scattered policy text into a clear compliance posture:
+- What is covered
+- What is missing
+- What is high risk
+- What to fix first
+- What report to show during review or audit
 
-- A **FastAPI backend** with document ingestion, analysis workflows, risk scoring, task generation, and report export.
-- A **Next.js frontend** with a landing page and product dashboard.
-- A **Neuro-SAN agent layer** for multi-agent orchestration (parser, mapper, gap detector, scorer, planner).
+The project is designed for hackathon delivery with strong judging alignment: practical business value, clear agentic architecture, explainable outputs, and an end-to-end live demo.
 
-## 1. Product Vision
+## Product Snapshot
 
-SMEs often fail compliance readiness because policies are scattered, controls are vague, and audit evidence is not centrally tracked. CompliQ centralizes this workflow in one platform:
+CompliQ currently supports this complete workflow:
+1. Upload policy or process documents.
+2. Select one or more documents for a run.
+3. Trigger compliance analysis.
+4. Receive coverage percentage and risk score.
+5. Review findings with evidence and recommendations.
+6. Review remediation tasks with priorities and due windows.
+7. Open generated report content directly in the dashboard.
 
-1. Upload policy artifacts and operational documents.
-2. Analyze controls and obligations.
-3. Identify high/medium/low severity gaps.
-4. Generate clear remediation tasks with owners and deadlines.
-5. Export an audit summary that leadership can review.
+## Why This Matters
 
-## 2. Core Outcomes
+SMEs often struggle with compliance because:
+- Policies exist but are fragmented.
+- Ownership is unclear.
+- Review cadence is not defined.
+- Incident and retention controls are incomplete.
+- Teams lack a lightweight way to prioritize remediation.
 
-CompliQ is designed to produce measurable outputs that are easy to score in a hackathon and practical in real use:
+CompliQ addresses this by combining deterministic checks (stable and fast) with an agentic Neuro-SAN path (advanced and extensible).
 
-- **Compliance Coverage %**
-- **Risk Score (0-100)**
-- **Top Findings with Evidence**
-- **Prioritized Action Plan**
-- **Report Artifact Path / Download**
+## Tech Stack
 
-## 3. Repository Layout
+- Backend: FastAPI + SQLModel + SQLite
+- Frontend: Next.js App Router + TypeScript + Tailwind CSS
+- Agent Layer: Neuro-SAN (frontman + specialist agents + coded tools)
+- LLM Key Source: `.env` (`OPENAI_API_KEY`)
+
+## Repository Structure
 
 ```text
 CompliQ/
-├── backend/                    # FastAPI service + persistence layer
+├── agents/                     # Neuro-SAN registries and coded tools
+│   ├── registries/
+│   └── coded_tools/
+├── backend/                    # FastAPI app
 │   ├── app/
-│   │   ├── api/               # HTTP routes
-│   │   ├── core/              # settings and DB
-│   │   ├── models/            # SQLModel entities
-│   │   ├── schemas/           # API request/response contracts
-│   │   ├── services/          # ingestion, analysis, report logic
-│   │   └── main.py            # app entry point
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   └── services/
 │   ├── tests/
 │   └── requirements.txt
-├── frontend/                   # Next.js UI (landing + dashboard)
-├── agents/                     # Neuro-SAN registries and coded tools
-├── docs/                       # detailed architecture and build docs
+├── frontend/                   # Next.js landing page + dashboard
+│   ├── app/
+│   ├── components/
+│   └── lib/
+├── docs/                       # Detailed technical and submission docs
 ├── .env.example
 └── .gitignore
 ```
 
-## 4. Environment Setup
+## Quick Start
 
-Create local environment variables:
+### 1. Clone and enter repository
+
+```bash
+git clone https://github.com/sambitsargam/CompliQ.git
+cd CompliQ
+```
+
+### 2. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Required values:
+Update `.env` values as needed:
+- `OPENAI_API_KEY`
+- `USE_NEURO_SAN`
+- `NEXT_PUBLIC_API_BASE_URL`
 
-- `OPENAI_API_KEY` for LLM-backed analysis paths.
-- `DATABASE_URL` defaults to SQLite and works out of the box.
-
-## 5. Run Backend
+### 3. Run backend
 
 ```bash
 cd backend
@@ -72,19 +95,11 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Backend base URL: `http://localhost:8000`
+Backend should be available at `http://localhost:8000`.
 
-Key routes:
+### 4. Run frontend
 
-- `GET /health`
-- `POST /api/v1/documents/upload`
-- `GET /api/v1/documents`
-- `POST /api/v1/analysis/run`
-- `GET /api/v1/analysis/{analysis_id}`
-- `GET /api/v1/tasks`
-- `GET /api/v1/reports/{analysis_id}`
-
-## 6. Run Frontend
+Open a new terminal:
 
 ```bash
 cd frontend
@@ -92,39 +107,79 @@ npm install
 npm run dev
 ```
 
-Frontend URL: `http://localhost:3000`
+Frontend should be available at `http://localhost:3000`.
 
-## 7. Neuro-SAN Integration Notes
+### 5. Demo flow
 
-CompliQ is structured to support a Neuro-SAN multi-agent workflow:
+1. Open `/dashboard`.
+2. Upload a sample policy text file.
+3. Select the uploaded document.
+4. Run analysis.
+5. Review findings/tasks/report content.
 
-- `ComplianceFrontman`
-- `DocParserAgent`
-- `RuleMapperAgent`
-- `GapDetectorAgent`
-- `RiskScorerAgent`
-- `ActionPlannerAgent`
+## Runtime Behavior: Neuro-SAN and Fallback
 
-The backend includes deterministic analysis logic as a reliable fallback path for local development and demo stability.
+CompliQ analysis follows this logic:
+1. If `USE_NEURO_SAN=true`, backend tries Neuro-SAN orchestration.
+2. If Neuro-SAN succeeds and returns valid JSON, that result is used.
+3. If Neuro-SAN fails or output is invalid, backend falls back to deterministic rule-based analysis.
 
-## 8. Documentation
+This design gives both:
+- agentic architecture for innovation scoring
+- deterministic reliability for live demo safety
 
-Detailed docs are in `docs/`:
+## API Overview
 
-- `docs/requirements.md` — functional/non-functional requirements
-- `docs/architecture.md` — system architecture and data flow
-- `docs/backend-design.md` — backend modules and API contracts
-- `docs/development-plan.md` — 12-step implementation plan
+Core endpoints:
+- `GET /health`
+- `GET /api/v1/health`
+- `POST /api/v1/documents/upload`
+- `GET /api/v1/documents`
+- `POST /api/v1/analysis/run`
+- `GET /api/v1/analysis/{analysis_id}`
+- `GET /api/v1/tasks`
+- `GET /api/v1/reports/{analysis_id}`
+- `GET /api/v1/reports/{analysis_id}/content`
 
-## 9. Security and Repository Hygiene
+Full contract details are in `docs/api-reference.md`.
 
-- `.env` is ignored by `.gitignore`
-- `.env.example` is versioned and safe to commit
-- Local files and generated reports are excluded from Git
+## Documentation Map
 
-## 10. Current Status
+- `docs/requirements.md`: product and system requirements
+- `docs/architecture.md`: system architecture and data flow
+- `docs/backend-design.md`: backend modules, models, and service behavior
+- `docs/frontend-design.md`: UX and client architecture
+- `docs/agent-design.md`: Neuro-SAN network and tooling
+- `docs/development-plan.md`: detailed 12-step build plan
+- `docs/runbook.md`: day-of-demo operational guide
+- `docs/submission-checklist.md`: hackathon evidence checklist
+- `docs/roadmap.md`: post-hackathon growth plan
 
-- Backend foundation: in progress
-- Frontend landing/dashboard: in progress
-- Neuro-SAN orchestration wiring: in progress
-- End-to-end demo script: planned in later steps
+## Security and Repo Hygiene
+
+- `.env` is ignored and never committed.
+- `.env.example` is versioned with safe placeholders.
+- No secrets should be hardcoded in source files.
+- Local runtime artifacts are excluded from Git.
+
+## What Is Production-Ready vs MVP
+
+MVP included now:
+- Upload, analyze, findings, tasks, report flow
+- Landing page + dashboard
+- Persistent data model in SQLite
+- Neuro-SAN adapter with fallback path
+
+Planned next:
+- Authentication and role-based access
+- Multi-tenant workspace boundaries
+- Deep parser support for PDF/DOCX
+- Integrations (ticketing, alerts, exports)
+
+## Contribution Notes
+
+If you continue implementation during the hackathon:
+- Keep API contracts stable.
+- Add tests for all new endpoints.
+- Update docs in `docs/` for every feature change.
+- Keep commits small and demo-safe.

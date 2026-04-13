@@ -1,90 +1,154 @@
 # CompliQ Requirements Specification
 
-## 1. Problem Statement
+## 1. Context and Problem Statement
 
-SMEs need a lightweight, affordable way to evaluate policy readiness and identify compliance gaps without a full legal ops stack.
+Small and medium businesses need affordable compliance readiness support but usually lack dedicated legal-ops tooling. Policies are often stored as disconnected documents, making it hard to answer:
+- What controls are currently documented?
+- What gaps create risk?
+- What should be fixed first?
 
-## 2. Functional Requirements
+CompliQ solves this by turning raw policy text into structured, explainable compliance outputs.
+
+## 2. Product Goals
+
+Primary goals for hackathon MVP:
+1. Deliver a complete upload-to-report workflow.
+2. Provide interpretable outputs (evidence + recommendations).
+3. Demonstrate agentic orchestration with Neuro-SAN.
+4. Preserve runtime reliability through deterministic fallback.
+5. Keep local setup simple (no Docker requirement).
+
+## 3. Stakeholders
+
+- SME founder or operator (decision maker)
+- Compliance lead or operations manager (primary user)
+- Hackathon judges (evaluation audience)
+
+## 4. Functional Requirements
 
 ### FR-1 Document Ingestion
 
-- Users can upload text-based policy artifacts (for MVP: txt/md/doc-like text streams).
-- System stores metadata, raw text, and preview snippet.
+- User can upload text-based policy artifacts.
+- System stores metadata, full text, and preview snippet.
+- System exposes uploaded records via list endpoint.
 
-### FR-2 Compliance Analysis Run
+Acceptance criteria:
+- Upload API returns document ID and timestamp.
+- Document appears in dashboard list without restart.
 
-- User selects one or more uploaded documents.
-- System triggers an analysis run using selected framework tag (default: `SME-BASELINE`).
-- System returns coverage, risk score, findings, and tasks.
+### FR-2 Analysis Request
+
+- User selects one or more uploaded document IDs.
+- User triggers analysis with framework tag (default `SME-BASELINE`).
+- System merges selected text and processes it.
+
+Acceptance criteria:
+- Invalid IDs return explicit `404`.
+- Valid IDs return analysis summary with scores.
 
 ### FR-3 Findings Generation
 
-Each finding includes:
+For each gap finding, system returns:
+- title
+- severity (`high`, `medium`, `low`)
+- evidence summary
+- recommendation
 
-- Title
-- Severity (`high`, `medium`, `low`)
-- Evidence summary
-- Recommendation
+Acceptance criteria:
+- Each finding has non-empty evidence and recommendation text.
 
-### FR-4 Action Plan Generation
+### FR-4 Remediation Task Generation
 
-Each task includes:
+For each finding, system returns an action task with:
+- title
+- owner
+- priority (`P1`, `P2`, `P3`)
+- due window (`due_in_days`)
+- status (default `open` in persistence)
 
-- Task title
-- Owner
-- Priority
-- Due-in days
-- Status
+Acceptance criteria:
+- Findings and tasks are consistently linked by analysis run.
 
-### FR-5 Report Export
+### FR-5 Report Artifact Generation
 
-- A report artifact is generated for each analysis run.
-- Report includes summary, findings, and action plan.
+- System generates a report artifact per analysis run.
+- Report must include summary, scores, findings, and tasks.
 
-### FR-6 Dashboard Read APIs
+Acceptance criteria:
+- Report metadata is queryable via API.
+- Report content is retrievable as text.
 
-- Fetch document list.
-- Fetch analysis details.
-- Fetch task list.
-- Fetch report reference.
+### FR-6 Dashboard Read and Interaction
 
-## 3. Non-Functional Requirements
+Dashboard must support:
+- Health status visibility
+- Document list and selection
+- Analysis trigger
+- Findings and tasks rendering
+- Report content rendering
 
-### NFR-1 Fast Local Setup
+Acceptance criteria:
+- Full flow is executable through UI only.
 
-- Must run without Docker.
-- SQLite default required for hackathon speed.
+## 5. Non-Functional Requirements
+
+### NFR-1 Setup Speed
+
+- Local run should be possible in under 15 minutes.
+- No Docker dependency for MVP.
 
 ### NFR-2 Explainability
 
-- Findings must include evidence and recommendation text.
+- Outputs must remain understandable to non-technical users.
+- Findings should include evidence and corrective direction.
 
 ### NFR-3 Reliability
 
-- Analysis endpoint should return deterministic output for same input in fallback mode.
+- System must return output even if agent path fails.
+- Fallback behavior should be deterministic for same input.
 
 ### NFR-4 Security Hygiene
 
-- No API keys in source files.
-- `.env` must be excluded from git history.
+- Secrets must not be committed.
+- `.env` must remain ignored by git.
+- `.env.example` must contain placeholders only.
 
-## 4. Tech Requirements
+### NFR-5 Demo Readiness
 
-- Backend: FastAPI + SQLModel
-- Frontend: Next.js + Tailwind
-- Agent Orchestration: Neuro-SAN
-- LLM: OpenAI key loaded from `.env`
+- APIs must be stable enough for repeat live demo runs.
+- UI must clearly communicate run status and outputs.
 
-## 5. MVP Scope
+## 6. Technical Requirements
 
-Included in MVP:
+- Backend: FastAPI, SQLModel, SQLite
+- Frontend: Next.js, TypeScript, Tailwind CSS
+- Agent Layer: Neuro-SAN with coded tools
+- Configuration: `.env` loaded via pydantic settings
 
-- Upload → Analyze → Findings/Tasks → Report flow
-- Landing page + dashboard shell
-- REST API and DB persistence
+## 7. Out of Scope (MVP)
 
-Out of scope for MVP:
+- User authentication and RBAC
+- Multi-tenant org boundaries
+- Full legal citation tracing
+- Enterprise integrations (SIEM, ERP, ticketing)
+- Advanced file parsing for all binary formats
 
-- Full auth and roles
-- Multi-tenant organization controls
-- Deep legal citation engine
+## 8. Risks and Mitigations
+
+1. LLM/agent instability
+- Mitigation: deterministic fallback engine
+
+2. Time-limited hackathon execution
+- Mitigation: strict MVP boundaries and incremental delivery
+
+3. Demo failure due to environment issues
+- Mitigation: runbook, health checks, and local-first defaults
+
+## 9. Success Metrics
+
+Hackathon-relevant success indicators:
+- End-to-end flow executes live in under 2 minutes
+- At least one meaningful finding generated for weak sample input
+- Clear remediation tasks produced with priorities
+- Report artifact generated and visible
+- Architecture and docs are judge-consumable
